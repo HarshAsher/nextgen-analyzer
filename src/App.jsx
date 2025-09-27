@@ -222,6 +222,49 @@ function analyzePortfolio(input, alpha = 0.5) {
   return { finalScore: round2(finalScore), overlapScore: round2(overlapScore), sectorScore: round2(sectorScore), sectors, totalValue, findings, recommendations, overlapsMatrix: buildOverlapMatrix(funds) };
 }
 
+// --- Adapter to produce the user's expected Portfolio Analyzer schema ---
+const SECTOR_ALIASES = { IT: "Technology", Banking: "Financials", FMCG: "Consumer Staples", Pharma: "Healthcare", Healthcare: "Healthcare" };
+function toTitle(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function riskFromScores(finalScore, overlapScore, sectorScore){
+  if (finalScore >= 75 && overlapScore >= 70 && sectorScore >= 70) return "Low";
+  if (finalScore >= 55) return "Moderate";
+  return "High";
+}
+function inferTraderType(sectorWeights){
+  const tech = (sectorWeights.IT||sectorWeights.Technology||0);
+  const fin = (sectorWeights.Banking||sectorWeights.Financials||0);
+  if (tech > fin && tech >= 0.35) return "Growth Investor";
+  if (fin >= 0.35) return "Income/Financials Tilt";
+  return "Balanced";
+}
+function buildPortfolioSpecOutput(client){
+  const calc = analyzePortfolio(client, 0.5);
+  const sectorDiversification = {};
+  Object.entries(calc.sectors).forEach(([k,v])=>{
+    const name = SECTOR_ALIASES[k] || toTitle(k);
+    sectorDiversification[name] = Math.round(v*1000)/10; // percent with 0.1 precision
+  });
+  const riskLevel = riskFromScores(calc.finalScore, calc.overlapScore, calc.sectorScore);
+  const hasCS = Object.keys(sectorDiversification).includes("Consumer Staples");
+  const hasUtilities = Object.keys(sectorDiversification).includes("Utilities");
+  const possibleDiversification = [];
+  if (!hasCS) possibleDiversification.push({ sector: "Consumer Staples", recommendation: "Consider adding stocks or funds in the Consumer Staples sector to balance your portfolio." });
+  if (!hasUtilities) possibleDiversification.push({ sector: "Utilities", recommendation: "Investing in Utilities can provide stable dividends and lower volatility." });
+  const traderType = inferTraderType(calc.sectors);
+  const summary = `Portfolio value ₹${calc.totalValue.toLocaleString()} with diversified exposure. Risk level ${riskLevel}. Consider ${possibleDiversification.map(x=>x.sector).join(" and ") || "maintaining current mix"}.`;
+  return {
+    portfolioAnalysis: {
+      totalValue: calc.totalValue,
+      sectorDiversification,
+      riskLevel,
+      performance: { oneYearReturn: null, threeYearReturn: null, fiveYearReturn: null }
+    },
+    possibleDiversification,
+    traderType,
+    summary
+  };
+}
+
 // ---------------- Watchlist (localStorage) ----------------
 function useWatchlist(){
   const [list, setList] = useState(()=>{
@@ -460,7 +503,7 @@ function PortfolioPage(){
             <PortfolioResult client={sel} />
           )}
         </Glass>
-        {sel && <JsonBlock title="Portfolio Analyzer – JSON" data={analyzePortfolio(sel,0.5)} />}
+        {sel && <JsonBlock title="Portfolio Analyzer – JSON (spec)" data={buildPortfolioSpecOutput(sel)} />}
       </div>
       {boom && <Confetti numberOfPieces={260} recycle={false} gravity={0.25} />}
     </div>
