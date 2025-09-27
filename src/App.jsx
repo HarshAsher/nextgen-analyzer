@@ -79,59 +79,97 @@ function evaluateStockRules(input) {
   const p = input?.parameters || {};
   const fb = {};
 
+  // 1) P/E
   const pe = Number(p.priceEarningsRatio);
-  if (pe < 15) fb.priceEarningsRatio = `P/E ${pe.toFixed(1)} suggests the stock is cheap vs earnings.`;
-  else if (pe <= 30) fb.priceEarningsRatio = `P/E ${pe.toFixed(1)} indicates fair valuation.`;
-  else fb.priceEarningsRatio = `P/E ${pe.toFixed(1)} looks expensive; growth must justify.`;
+  if (pe < 15) fb.priceEarningsRatio = `The P/E ratio of ${pe} suggests the stock is cheap relative to earnings.`;
+  else if (pe <= 30) fb.priceEarningsRatio = `The P/E ratio of ${pe} is fairly typical.`;
+  else fb.priceEarningsRatio = `The P/E ratio of ${pe} indicates the stock is relatively expensive compared to its earnings.`;
 
+  // 2) EPS
   const eps = Number(p.earningsPerShare);
-  fb.earningsPerShare = eps > 0 ? `EPS ${eps.toFixed(2)} indicates profitability.` : `Negative EPS indicates losses.`;
+  if (eps < 1) fb.earningsPerShare = `The EPS of ${eps} is low; profitability may be a concern.`;
+  else if (eps < 5) fb.earningsPerShare = `The EPS of ${eps} shows modest profitability.`;
+  else fb.earningsPerShare = `The EPS of ${eps} is a strong indicator of the company's profitability.`;
 
+  // 3) Dividend Yield (%)
   const dy = Number(p.dividendYield);
-  if (dy >= 2) fb.dividendYield = `Dividend yield ${dy.toFixed(2)}% provides healthy income.`;
-  else if (dy > 0) fb.dividendYield = `Dividend yield ${dy.toFixed(2)}% is modest.`;
-  else fb.dividendYield = `No dividend.`;
+  if (dy < 1) fb.dividendYield = `The dividend yield of ${dy}% is lower than the market average.`;
+  else if (dy <= 3) fb.dividendYield = `The dividend yield of ${dy}% is around the market norm.`;
+  else fb.dividendYield = `The dividend yield of ${dy}% is attractive for income focused investors.`;
 
+  // 4) Market Cap (trillions)
+  const trillion = 1_000_000_000_000;
   const mc = Number(p.marketCap);
-  if (mc > 1e11) fb.marketCap = `Mega-cap scale (~$${(mc/1e9).toFixed(0)}B) adds stability & liquidity.`;
-  else if (mc > 1e10) fb.marketCap = `Large/mid-cap (~$${(mc/1e9).toFixed(0)}B).`;
-  else fb.marketCap = `Small-cap (~$${(mc/1e9).toFixed(1)}B) — higher idiosyncratic risk.`;
+  if (mc >= 500 * trillion) fb.marketCap = `The market cap of $${(mc / trillion).toFixed(1)} trillion makes it one of the world’s giants.`;
+  else if (mc >= 100 * trillion) fb.marketCap = `The market cap of $${(mc / trillion).toFixed(1)} trillion indicates a very large, stable company.`;
+  else fb.marketCap = `The market capitalization of $${(mc / trillion).toFixed(1)} trillion indicates a sizable player.`;
 
+  // 5) Debt/Equity
   const dte = Number(p.debtToEquityRatio);
-  if (dte < 0.5) fb.debtToEquityRatio = `Low leverage (D/E ${dte.toFixed(2)}).`;
-  else if (dte <= 1.5) fb.debtToEquityRatio = `Moderate leverage (D/E ${dte.toFixed(2)}).`;
-  else fb.debtToEquityRatio = `High leverage risk (D/E ${dte.toFixed(2)}).`;
+  if (dte < 0.5) fb.debtToEquityRatio = `The debt to equity ratio of ${dte} suggests very little leverage.`;
+  else if (dte <= 1.5) fb.debtToEquityRatio = `The debt to equity ratio of ${dte} suggests a moderate level of leverage.`;
+  else fb.debtToEquityRatio = `The debt to equity ratio of ${dte} indicates high leverage; watch for risk.`;
 
-  const roe = Number(p.returnOnEquity);
-  if (roe > 0.15) fb.returnOnEquity = `ROE ${(roe*100).toFixed(0)}% is strong.`;
-  else if (roe >= 0.08) fb.returnOnEquity = `ROE ${(roe*100).toFixed(0)}% is adequate.`;
-  else fb.returnOnEquity = `ROE ${(roe*100).toFixed(0)}% is weak.`;
+  // 6) ROE (%)
+  const roePct = Number(p.returnOnEquity) * 100;
+  if (roePct < 8) fb.returnOnEquity = `The ROE of ${roePct.toFixed(2)}% is below average.`;
+  else if (roePct <= 15) fb.returnOnEquity = `The ROE of ${roePct.toFixed(2)}% is healthy.`;
+  else fb.returnOnEquity = `The ROE of ${roePct.toFixed(2)}% is very strong, showing efficient profit generation.`;
 
-  const roa = Number(p.returnOnAssets);
-  if (roa > 0.07) fb.returnOnAssets = `ROA ${(roa*100).toFixed(0)}% is efficient.`;
-  else if (roa >= 0.03) fb.returnOnAssets = `ROA ${(roa*100).toFixed(0)}% is fair.`;
-  else fb.returnOnAssets = `ROA ${(roa*100).toFixed(0)}% is low.`;
+  // 7) ROA (%)
+  const roaPct = Number(p.returnOnAssets) * 100;
+  if (roaPct < 5) fb.returnOnAssets = `The ROA of ${roaPct.toFixed(2)}% is modest.`;
+  else if (roaPct <= 10) fb.returnOnAssets = `The ROA of ${roaPct.toFixed(2)}% indicates efficient asset utilization.`;
+  else fb.returnOnAssets = `The ROA of ${roaPct.toFixed(2)}% is excellent, showing superb asset productivity.`;
 
+  // 8) Current Ratio
   const cr = Number(p.currentRatio);
-  if (cr < 1.0) fb.currentRatio = `Current ratio ${cr.toFixed(2)} < 1 indicates liquidity stress.`;
-  else if (cr <= 3.0) fb.currentRatio = `Current ratio ${cr.toFixed(2)} is healthy.`;
-  else fb.currentRatio = `Current ratio ${cr.toFixed(2)} may suggest idle working capital.`;
+  if (cr < 1) fb.currentRatio = `The current ratio of ${cr} signals potential short term liquidity issues.`;
+  else if (cr <= 2) fb.currentRatio = `The current ratio of ${cr} suggests the company has a good short term liquidity position.`;
+  else fb.currentRatio = `The current ratio of ${cr} indicates a very comfortable liquidity cushion.`;
 
+  // 9) Quick Ratio
   const qr = Number(p.quickRatio);
-  fb.quickRatio = qr >= 1 ? `Quick ratio ${qr.toFixed(2)} supports short-term coverage.` : `Quick ratio ${qr.toFixed(2)} below 1 — caution.`;
+  if (qr < 1) fb.quickRatio = `The quick ratio of ${qr} may be insufficient for immediate obligations.`;
+  else if (qr <= 2) fb.quickRatio = `The quick ratio of ${qr} indicates a strong ability to meet short term obligations.`;
+  else fb.quickRatio = `The quick ratio of ${qr} shows an exceptionally strong liquidity position.`;
 
+  // 10) Book Value per Share
   const bv = Number(p.bookValuePerShare);
-  fb.bookValuePerShare = `Book value/share ${bv.toFixed(2)} provides asset backing context.`;
+  fb.bookValuePerShare = `The book value per share of ${bv} is a measure of the company's net asset value on a per share basis.`;
 
-  // Simple pillar scoring
-  const quality = clampScore((roe*100)/20 + (roa*100)/10 + (qr>=1?20:10) + (cr>=1 && cr<=3?20:10) + (dte<0.5?20:(dte<=1.5?15:5)));
-  const value = clampScore((pe<15?40:(pe<=30?25:10)) + (dy>=2?30:(dy>0?20:5)) + (bv>0?10:0));
-  const overall = Math.round(0.6*quality + 0.4*value);
+  // Build summary (simple concatenation of key lines)
+  const summaryParts = [
+    fb.priceEarningsRatio,
+    fb.earningsPerShare,
+    fb.returnOnEquity,
+    fb.returnOnAssets,
+    fb.currentRatio,
+    fb.quickRatio,
+    fb.debtToEquityRatio,
+    fb.dividendYield,
+    fb.marketCap,
+  ];
+  const summary = summaryParts.join(" ");
 
-  const summary = `Overall, ${input.stockSymbol} shows ${quality>70?"strong":"mixed"} quality and ${value>60?"reasonable":"stretched"} valuation. Key notes: ${fb.priceEarningsRatio} ${fb.debtToEquityRatio} ${fb.dividendYield}`;
+  // Basic pillar scores (optional; keep for visuals)
+  const quality = Math.round(
+    (roePct >= 15 ? 30 : roePct >= 8 ? 20 : 10) +
+    (roaPct >= 10 ? 25 : roaPct >= 5 ? 18 : 10) +
+    (qr >= 1 ? 15 : 8) +
+    (cr >= 1 && cr <= 2 ? 15 : cr > 2 ? 12 : 6) +
+    (dte < 0.5 ? 15 : dte <= 1.5 ? 12 : 6)
+  );
+  const value = Math.round(
+    (pe < 15 ? 30 : pe <= 30 ? 20 : 10) +
+    (dy >= 3 ? 25 : dy >= 1 ? 18 : 10) +
+    (bv > 0 ? 10 : 0)
+  );
+  const overall = Math.max(0, Math.min(100, Math.round(0.6 * quality + 0.4 * value)));
 
   return { stockSymbol: input.stockSymbol, feedback: fb, summary, quality, value, overall };
 }
+
 
 function clampScore(n){ return Math.max(0, Math.min(100, Math.round(n))); }
 
@@ -275,6 +313,39 @@ function Header({dark, setDark}){
     </div>
   );
 }
+
+// in App.jsx (top-level)
+function useTheme() {
+  const [dark, setDark] = React.useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    return window.matchMedia?.("(prefers-color-scheme: dark)").matches; // system default
+  });
+
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [dark]);
+
+  // live update if user changes OS theme while app is open
+  React.useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = e => {
+      if (!localStorage.getItem("theme")) setDark(e.matches);
+    };
+    mq.addEventListener?.("change", handler);
+    return () => mq.removeEventListener?.("change", handler);
+  }, []);
+
+  return [dark, setDark];
+}
+
 
 const TabButton = ({active, onClick, icon:Icon, children}) => (
   <button onClick={onClick}
@@ -477,8 +548,8 @@ function OverlapTable({matrix}){
 
 // ---------- Main Component ----------
 export default function NextGenMarketAnalyzer(){
-  const [tab, setTab] = useState("stock");
-  const [dark, setDark] = useState(false);
+  const [tab, setTab] = React.useState("stock");
+  const [dark, setDark] = useTheme();
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 text-slate-800 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900">

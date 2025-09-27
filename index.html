@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+      // optional customizations, keep here since you removed tailwind.config.js
+      colors: { brand: { DEFAULT: '#4f46e5' } }
+    } }
+  };
+  // Apply saved/theme before React mounts (prevents flash)
+  (function () {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const useDark = saved ? saved === 'dark' : prefersDark;
+    if (useDark) document.documentElement.classList.add('dark');
+  })();
+</script>
+
+
+
+
     <title>nextgen-analyzer</title>
   </head>
   <body>
